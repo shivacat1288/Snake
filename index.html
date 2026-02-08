@@ -297,7 +297,7 @@
 
             gameStarted = true;
             musicUnlocked = true;
-
+            bgMusic.load();
             // 🔊 Audio-Engine freischalten (ECHTER Sound!)
             eatsound.currentTime = 0;
             eatsound.volume = 0.05;
@@ -317,7 +317,7 @@
             // ▶️ GAME STARTET ERST JETZT
             gameInterval = setInterval(gameloop, baseSpeed);
 
-            bgMusic.load();
+            
         }
 
         function testGameOver() {
@@ -603,3 +603,4 @@
 
 
 </html>
+

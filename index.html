@@ -224,9 +224,11 @@
         let levelUpFlash = 0; // Frames für Level-Up Effekt
         let vibrationUnlocked = false;
         let superFood = null;
-        let superFoodTimer = 0;
-        const SUPERFOOD_DURATION = 300; // Frames ≈ 5 Sekunden
-        const SUPERFOOD_CHANCE = 0.15;  // 15 % Chance nach normalem Essen
+
+        const SUPERFOOD_CHANCE = 0.30;  // 25 % Chance nach normalem Essen
+        let rainbowMode = false;
+        let rainbowExpiresAt = 0;
+        let superFoodExpiresAt = 0;
 
 
         let silentAudio = new Audio();
@@ -283,7 +285,7 @@
                 if (index === 0) {
                     drawHead(part.x, part.y);
                 } else {
-                    add(part.x, part.y);
+                    add(part.x, part.y, index);
                 }
             });
 
@@ -333,7 +335,12 @@
         function drawSuperFood(x, y) {
             const px = x * cellWidth;
             const py = y * cellHeight;
-            const pulse = Math.sin(superFoodTimer * 0.2) * 4;
+
+            const timeLeft = Math.max(0, superFoodExpiresAt - Date.now());
+            const t = timeLeft / 1000; // Sekunden
+
+            // Puls wird schneller, je weniger Zeit bleibt
+            const pulse = Math.sin(t * (t < 1.5 ? 16 : 8)) * 4;
 
             ctx.shadowColor = '#ff00ff';
             ctx.shadowBlur = 20;
@@ -541,18 +548,24 @@
 
                 valid =
                     !snake.some(p => p.x === x && p.y === y) &&
-                    !(food.x === x && food.y === y);
+                    (!food || food.x !== x || food.y !== y);
+
 
                 if (valid) {
                     superFood = { x, y };
-                    superFoodTimer = SUPERFOOD_DURATION;
+                    superFoodExpiresAt = Date.now() + 7000; // ✅ exakt 7 Sekunden
                 }
             }
         }
 
 
-        function add(x, y) {
-            ctx.fillStyle = '#ffffff'; // ← WICHTIG
+        function add(x, y, index) {
+            if (rainbowMode) {
+                ctx.fillStyle = getRainbowColor(index);
+            } else {
+                ctx.fillStyle = '#ffffff';
+            }
+
             ctx.fillRect(
                 x * cellWidth,
                 y * cellHeight,
@@ -560,6 +573,7 @@
                 cellHeight - 1
             );
         }
+
 
         function drawHead(x, y) {
             const px = x * cellWidth;
@@ -581,6 +595,13 @@
             drawEyes(x, y);
             drawTongue(x, y);
         }
+
+
+        function getRainbowColor(index) {
+            const hue = (Date.now() / 8 + index * 20) % 360;
+            return `hsl(${hue}, 100%, 60%)`;
+        }
+
 
 
         function shiftSnake() {
@@ -644,11 +665,13 @@
                 snake[0].y === superFood.y) {
 
                 score += 10;
+                rainbowMode = true;
+                rainbowExpiresAt = Date.now() + 4000; // 🎯 exakt 4 Sekunden
                 document.getElementById('score').textContent = score;
 
                 // ❌ KEIN growSegments++
                 superFood = null;
-                superFoodTimer = 0;
+
 
                 // 🔊 Bonus-Feedback (optional)
                 levelUpSound.currentTime = 0;
@@ -698,14 +721,14 @@
                 tongueTimer--;
             }
 
-            if (superFood) {
-                superFoodTimer--;
-
-                if (superFoodTimer <= 0) {
-                    superFood = null;
-                }
+            if (superFood && Date.now() > superFoodExpiresAt) {
+                superFood = null;
             }
 
+
+            if (rainbowMode && Date.now() > rainbowExpiresAt) {
+                rainbowMode = false;
+            }
 
 
             testGameOver();
@@ -817,6 +840,10 @@
 
             document.getElementById('name-input').style.display = 'none';
 
+            superFood = null;
+            superFoodExpiresAt = 0;
+            rainbowMode = false;
+            rainbowExpiresAt = 0;
             snake = [{ x: 26, y: 3 }];
             direction = "LEFT";
             nextDirection = "LEFT";
@@ -825,7 +852,6 @@
             document.getElementById('speed-level').textContent = 1;
             document.getElementById('score').textContent = score;
             gameOver = false;
-            foodCollected = false;
 
             placefood();
 

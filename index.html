@@ -160,6 +160,32 @@
     </style>
 
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import {
+            getFirestore,
+            collection,
+            addDoc,
+            query,
+            orderBy,
+            limit,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJF5PLnlWghvf1Tev7Ibiy6lDAqZhWc4Q",
+            authDomain: "rainbow-snake-5d7ac.firebaseapp.com",
+            projectId: "rainbow-snake-5d7ac",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 🔓 Global verfügbar machen
+        window.db = db;
+        window.fs = { collection, addDoc, query, orderBy, limit, getDocs };
+    </script>
+
 </head>
 
 <body>
@@ -268,7 +294,10 @@
 
         draw(); // ist die zeichnen funktion
 
-        renderHighscores();
+
+        window.addEventListener('load', () => {
+            loadGlobalHighscores();
+        });
 
         document.getElementById('speed-level').textContent = speedLevel + 1;
 
@@ -505,6 +534,7 @@
         }
 
         function saveHighscore() {
+
             const input = document.getElementById('player-name');
             let name = input.value.trim();
 
@@ -521,8 +551,46 @@
             // UI zurücksetzen
             input.value = '';
             document.getElementById('name-input').style.display = 'none';
+
+            saveHighscoreGlobal(name, score);
+
+
             restartGame();
         }
+
+
+
+        async function loadGlobalHighscores() {
+            const { collection, query, orderBy, limit, getDocs } = window.fs;
+
+            const q = query(
+                collection(db, "highscores"),
+                orderBy("score", "desc"),
+                limit(5)
+            );
+
+            const snapshot = await getDocs(q);
+            const list = document.getElementById("highscore-list");
+            list.innerHTML = "";
+
+            snapshot.forEach(doc => {
+                const { name, score } = doc.data();
+                const li = document.createElement("li");
+                li.textContent = `${name} – ${score}`;
+                list.appendChild(li);
+            });
+        }
+
+        async function saveHighscoreGlobal(name, score) {
+            const { collection, addDoc } = window.fs;
+
+            await addDoc(collection(db, "highscores"), {
+                name,
+                score,
+                created: Date.now()
+            });
+        }
+
 
         function placefood() {
             let valid = false;

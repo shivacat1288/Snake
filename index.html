@@ -225,7 +225,7 @@
         let score = 0;
         let gameOver = false;
         let gameInterval;
-        let highscores = JSON.parse(localStorage.getItem('highscores')) || [];
+        let highscores = [];
         let eatsound = new Audio('eat.mp3');
         eatsound.volume = 0.1;
         let bgMusic = new Audio('Tetris.mp3');

@@ -225,7 +225,6 @@
         let score = 0;
         let gameOver = false;
         let gameInterval;
-        let highscores = [];
         let eatsound = new Audio('eat.mp3');
         eatsound.volume = 0.1;
         let bgMusic = new Audio('Tetris.mp3');
@@ -250,7 +249,12 @@
         let levelUpFlash = 0; // Frames für Level-Up Effekt
         let vibrationUnlocked = false;
         let superFood = null;
+        let globalHighscores = [];
 
+        window.addEventListener('load', () => {
+            loadGlobalHighscores();
+        });
+        
         const SUPERFOOD_CHANCE = 0.30;  // 25 % Chance nach normalem Essen
         let rainbowMode = false;
         let rainbowExpiresAt = 0;
@@ -295,9 +299,7 @@
         draw(); // ist die zeichnen funktion
 
 
-        window.addEventListener('load', () => {
-            loadGlobalHighscores();
-        });
+
 
         document.getElementById('speed-level').textContent = speedLevel + 1;
 
@@ -521,40 +523,30 @@
                 clearInterval(gameInterval);
                 bgMusic.pause();
 
-                // ✅ Highscore NUR hier setzen
                 const qualifies =
-                    highscores.length < 5 ||
-                    score > highscores[highscores.length - 1].score;
+                    globalHighscores.length < 5 ||
+                    score > globalHighscores[globalHighscores.length - 1]?.score;
 
                 if (qualifies) {
-                    document.getElementById('name-input').style.display = 'block';
-                    document.getElementById('player-name').focus();
+                    showNameInput();
                 }
             }
         }
 
-        function saveHighscore() {
-
+        async function saveHighscore() {
             const input = document.getElementById('player-name');
             let name = input.value.trim();
-
             if (name === '') name = '???';
 
-            highscores.push({ name, score });
-
-            highscores.sort((a, b) => b.score - a.score);
-            highscores = highscores.slice(0, 5);
-
-            
-            // UI zurücksetzen
-            input.value = '';
             document.getElementById('name-input').style.display = 'none';
+            input.value = '';
 
-            saveHighscoreGlobal(name, score);
-
+            await saveHighscoreGlobal(name, score);
+            await loadGlobalHighscores();
 
             restartGame();
         }
+
 
 
 
@@ -568,17 +560,20 @@
             );
 
             const snapshot = await getDocs(q);
+
+            globalHighscores = [];
             const list = document.getElementById("highscore-list");
             list.innerHTML = "";
 
             snapshot.forEach(doc => {
-                const { name, score } = doc.data();
+                const data = doc.data();
+                globalHighscores.push(data);
+
                 const li = document.createElement("li");
-                li.textContent = `${name} – ${score}`;
+                li.textContent = `${data.name} – ${data.score}`;
                 list.appendChild(li);
             });
         }
-
         async function saveHighscoreGlobal(name, score) {
             const { collection, addDoc } = window.fs;
 
@@ -587,6 +582,12 @@
                 score,
                 created: Date.now()
             });
+        }
+
+        function showNameInput() {
+            const box = document.getElementById('name-input');
+            box.style.display = 'block';
+            document.getElementById('player-name').focus();
         }
 
 
@@ -932,16 +933,7 @@
 
 
         }
-        function renderHighscores() {
-            const list = document.getElementById('highscore-list');
-            list.innerHTML = '';
 
-            highscores.forEach(entry => {
-                const li = document.createElement('li');
-                li.textContent = `${entry.name} – ${entry.score}`;
-                list.appendChild(li);
-            });
-        }
 
         document.getElementById('player-name').addEventListener('keydown', e => {
             if (e.key === 'Enter') {

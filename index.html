@@ -43,6 +43,20 @@
         /* 🏆 SCOREBOARD */
         .score-board {
             min-width: 200px;
+            max-height: 480px;
+            /* 🔑 gleiche Höhe wie Canvas */
+            overflow: hidden;
+        }
+
+        .score-board ol {
+            max-height: 360px;
+            /* Platz unter Score + Level */
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .score-board {
+            min-width: 200px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #ff00ff;
@@ -254,7 +268,7 @@
         window.addEventListener('load', () => {
             loadGlobalHighscores();
         });
-        
+
         const SUPERFOOD_CHANCE = 0.30;  // 25 % Chance nach normalem Essen
         let rainbowMode = false;
         let rainbowExpiresAt = 0;

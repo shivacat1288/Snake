@@ -198,7 +198,7 @@
             <p>Score: <span id="score">0</span></p>
             <p>Level: <span id="speed-level">1</span></p>
             <br>
-            <h3>Top 5</h3>
+            <h3>Top 100</h3>
             <ol id="highscore-list"></ol>
         </div>
     </div>
@@ -524,7 +524,7 @@
                 bgMusic.pause();
 
                 const qualifies =
-                    globalHighscores.length < 5 ||
+                    globalHighscores.length < 100 ||
                     score > globalHighscores[globalHighscores.length - 1]?.score;
 
                 if (qualifies) {
@@ -556,7 +556,7 @@
             const q = query(
                 collection(db, "highscores"),
                 orderBy("score", "desc"),
-                limit(5)
+                limit(100)
             );
 
             const snapshot = await getDocs(q);

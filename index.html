@@ -404,15 +404,9 @@
         });
 
 
-        canvas.addEventListener('click', unlockAudio);
-        canvas.addEventListener('touchstart', unlockAudio);
-
         canvas.addEventListener('click', () => {
             if (gameOver) restartGame();
         });
-
-
-
 
 
 
@@ -587,37 +581,23 @@
         }
 
         function unlockAudio() {
-            if (gameStarted) return;
+            if (musicUnlocked) return;
 
-            gameStarted = true;
             musicUnlocked = true;
-            vibrationUnlocked = true; // 👈 HIER
+            vibrationUnlocked = true;
 
-            // 🔓 Vibrations-Engine einmal aktivieren
-            if (navigator.vibrate) {
-                navigator.vibrate(1);
-            }
-            bgMusic.load();
-            // 🔊 Audio-Engine freischalten (ECHTER Sound!)
+            if (navigator.vibrate) navigator.vibrate(1);
+
             eatsound.currentTime = 0;
-            eatsound.volume = 0.05;
-
             eatsound.play().then(() => {
                 eatsound.pause();
                 eatsound.currentTime = 0;
-                eatsound.volume = 0.1;
             }).catch(() => { });
 
-            // 🎵 Hintergrundmusik
             if (musicOn) {
                 bgMusic.currentTime = 0;
                 bgMusic.play().catch(() => { });
             }
-
-            // ▶️ GAME STARTET ERST JETZT
-            gameInterval = setInterval(gameloop, baseSpeed);
-
-
         }
 
         function testGameOver() {
@@ -1097,22 +1077,15 @@
         const gameScreen = document.getElementById('game-screen');
 
         startBtn.addEventListener('click', () => {
-            // Screens wechseln
             startScreen.classList.remove('active');
             gameScreen.classList.add('active');
 
-            // Audio nur freischalten
-            musicUnlocked = true;
-            vibrationUnlocked = true;
+            unlockAudio();     // 🔊 nur Audio
+            gameStarted = true;
 
+            draw();            // 🎨 Renderloop starten
+            gameInterval = setInterval(gameloop, baseSpeed); // 🐍 Spiel läuft
 
-            // Game erst starten
-            setTimeout(() => {
-                unlockAudio();
-                draw();
-            }, 300);
-
-            // Highscore neu laden (Sicherheit)
             loadGlobalHighscores();
         });
 

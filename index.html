@@ -44,6 +44,12 @@
         .score-board {
             min-width: 200px;
             max-height: 480px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ff00ff;
+            box-shadow:
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff;
             /* 🔑 gleiche Höhe wie Canvas */
             overflow: hidden;
         }
@@ -55,15 +61,7 @@
             padding-right: 8px;
         }
 
-        .score-board {
-            min-width: 200px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #ff00ff;
-            box-shadow:
-                0 0 10px #ff00ff,
-                0 0 20px #ff00ff;
-        }
+
 
         .score-board p {
             font-size: 18px;
@@ -183,7 +181,8 @@
             query,
             orderBy,
             limit,
-            getDocs
+            getDocs,
+            deleteDoc
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -197,7 +196,7 @@
 
         // 🔓 Global verfügbar machen
         window.db = db;
-        window.fs = { collection, addDoc, query, orderBy, limit, getDocs };
+        window.fs = { collection, addDoc, query, orderBy, limit, getDocs, deleteDoc };
     </script>
 
 </head>
@@ -556,6 +555,7 @@
             input.value = '';
 
             await saveHighscoreGlobal(name, score);
+            await cleanupHighscores();
             await loadGlobalHighscores();
 
             restartGame();
@@ -588,6 +588,33 @@
                 list.appendChild(li);
             });
         }
+
+        async function cleanupHighscores() {
+            const { collection, query, orderBy, getDocs, deleteDoc } = window.fs;
+
+            const q = query(
+                collection(db, "highscores"),
+                orderBy("score", "desc")
+            );
+
+            const snapshot = await getDocs(q);
+
+            let index = 0;
+            const deletions = [];
+
+            snapshot.forEach(doc => {
+                if (index >= 100) {
+                    deletions.push(deleteDoc(doc.ref));
+                }
+                index++;
+            });
+
+            if (deletions.length > 0) {
+                await Promise.all(deletions);
+                console.log(`🧹 Cleanup: ${deletions.length} Einträge gelöscht`);
+            }
+        }
+
         async function saveHighscoreGlobal(name, score) {
             const { collection, addDoc } = window.fs;
 

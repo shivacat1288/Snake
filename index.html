@@ -43,25 +43,13 @@
         /* 🏆 SCOREBOARD */
         .score-board {
             min-width: 200px;
-            max-height: 480px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #ff00ff;
             box-shadow:
                 0 0 10px #ff00ff,
                 0 0 20px #ff00ff;
-            /* 🔑 gleiche Höhe wie Canvas */
-            overflow: hidden;
         }
-
-        .score-board ol {
-            max-height: 360px;
-            /* Platz unter Score + Level */
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-
-
 
         .score-board p {
             font-size: 18px;
@@ -169,93 +157,6 @@
                 padding-bottom: 20px;
             }
         }
-
-        .screen {
-            display: none;
-            width: 100%;
-        }
-
-        .screen.active {
-            display: block;
-        }
-
-        /* 🟣 STARTSCREEN */
-        .start-layout.vertical {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 420px;
-            margin-top: 40px;
-        }
-
-        /* Start Button oben priorisieren */
-        #start-btn {
-            margin: 20px 0 30px 0;
-            width: 100%;
-        }
-
-        /* Highscore Bereich */
-        .start-highscore-title {
-            margin-bottom: 10px;
-            color: #ff00ff;
-            text-shadow: 0 0 8px #ff00ff;
-        }
-
-        #highscore-list {
-            width: 100%;
-            max-height: 300px;
-            overflow-y: auto;
-            padding-left: 20px;
-        }
-
-        .start-left {
-            text-align: center;
-        }
-
-        .neon-title {
-            font-size: 48px;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-            margin-bottom: 30px;
-        }
-
-        #start-btn {
-            font-size: 22px;
-            padding: 15px 30px;
-            background: black;
-            color: #ff00ff;
-            border: 3px solid #ff00ff;
-            cursor: pointer;
-            box-shadow: 0 0 15px #ff00ff;
-        }
-
-        #start-btn:hover {
-            background: #ff00ff;
-            color: black;
-        }
-
-        /* 🟢 SWIPE AREA */
-        #swipe-area {
-            margin-top: 10px;
-            width: 100%;
-            max-width: 480px;
-            height: 100px;
-            border: 2px dashed #00ffff;
-            color: #00ffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-shadow: 0 0 5px #00ffff;
-        }
-
-        /* 📱 MOBILE */
-        @media (max-width: 768px) {
-            .start-layout.vertical {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
     </style>
 
 
@@ -268,8 +169,7 @@
             query,
             orderBy,
             limit,
-            getDocs,
-            deleteDoc
+            getDocs
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -283,7 +183,7 @@
 
         // 🔓 Global verfügbar machen
         window.db = db;
-        window.fs = { collection, addDoc, query, orderBy, limit, getDocs, deleteDoc };
+        window.fs = { collection, addDoc, query, orderBy, limit, getDocs };
     </script>
 
 </head>
@@ -291,35 +191,22 @@
 <body>
 
 
-    <!-- 🟣 STARTSCREEN -->
-    <div id="start-screen" class="screen active">
-        <div class="start-layout vertical">
+    <div class="game-wrapper">
+        <canvas id="canvas" width="480" height="480"></canvas>
 
-            <h1 class="neon-title">NEON SNAKE</h1>
-
-            <button id="start-btn">▶ START GAME</button>
-
-            <h3 class="start-highscore-title">Top 100</h3>
+        <div class="score-board">
+            <p>Score: <span id="score">0</span></p>
+            <p>Level: <span id="speed-level">1</span></p>
+            <br>
+            <h3>Top 100</h3>
             <ol id="highscore-list"></ol>
-
         </div>
     </div>
 
-    <!-- 🟢 GAME SCREEN -->
-    <div id="game-screen" class="screen">
-        <div class="game-wrapper">
-            <canvas id="canvas" width="480" height="480"></canvas>
-
-            <div class="score-board">
-                <p>Score: <span id="score">0</span></p>
-                <p>Level: <span id="speed-level">1</span></p>
-            </div>
-        </div>
-
-        <!-- 👆 Swipe Area -->
-        <div id="swipe-area">
-            <p>⬅️ ⬆️ ➡️ ⬇️ Swipe here</p>
-        </div>
+    <div id="name-input" style="display:none">
+        <p>Neuer Highscore!</p>
+        <input type="text" id="player-name" maxlength="10" placeholder="Name">
+        <button onclick="saveHighscore()">Speichern</button>
     </div>
 
     <script>
@@ -367,7 +254,7 @@
         window.addEventListener('load', () => {
             loadGlobalHighscores();
         });
-
+        
         const SUPERFOOD_CHANCE = 0.30;  // 25 % Chance nach normalem Essen
         let rainbowMode = false;
         let rainbowExpiresAt = 0;
@@ -387,26 +274,30 @@
 
 
         document.addEventListener('keydown', keyDown);
-
-        const swipeArea = document.getElementById('swipe-area');
-
-        swipeArea.addEventListener('touchstart', e => {
-            const t = e.touches[0];
-            touchStartX = t.clientX;
-            touchStartY = t.clientY;
+        canvas.addEventListener('touchstart', e => {
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
         }, { passive: true });
 
-        swipeArea.addEventListener('touchend', e => {
-            const t = e.changedTouches[0];
-            touchEndX = t.clientX;
-            touchEndY = t.clientY;
+
+        canvas.addEventListener('click', unlockAudio);
+        canvas.addEventListener('touchstart', unlockAudio);
+
+        canvas.addEventListener('touchend', e => {
+            const touch = e.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+
             handleSwipe();
         });
-
 
         canvas.addEventListener('click', () => {
             if (gameOver) restartGame();
         });
+
+        draw(); // ist die zeichnen funktion
+
 
 
 
@@ -581,23 +472,37 @@
         }
 
         function unlockAudio() {
-            if (musicUnlocked) return;
+            if (gameStarted) return;
 
+            gameStarted = true;
             musicUnlocked = true;
-            vibrationUnlocked = true;
+            vibrationUnlocked = true; // 👈 HIER
 
-            if (navigator.vibrate) navigator.vibrate(1);
-
+            // 🔓 Vibrations-Engine einmal aktivieren
+            if (navigator.vibrate) {
+                navigator.vibrate(1);
+            }
+            bgMusic.load();
+            // 🔊 Audio-Engine freischalten (ECHTER Sound!)
             eatsound.currentTime = 0;
+            eatsound.volume = 0.05;
+
             eatsound.play().then(() => {
                 eatsound.pause();
                 eatsound.currentTime = 0;
+                eatsound.volume = 0.1;
             }).catch(() => { });
 
+            // 🎵 Hintergrundmusik
             if (musicOn) {
                 bgMusic.currentTime = 0;
                 bgMusic.play().catch(() => { });
             }
+
+            // ▶️ GAME STARTET ERST JETZT
+            gameInterval = setInterval(gameloop, baseSpeed);
+
+
         }
 
         function testGameOver() {
@@ -637,7 +542,6 @@
             input.value = '';
 
             await saveHighscoreGlobal(name, score);
-            await cleanupHighscores();
             await loadGlobalHighscores();
 
             restartGame();
@@ -670,33 +574,6 @@
                 list.appendChild(li);
             });
         }
-
-        async function cleanupHighscores() {
-            const { collection, query, orderBy, getDocs, deleteDoc } = window.fs;
-
-            const q = query(
-                collection(db, "highscores"),
-                orderBy("score", "desc")
-            );
-
-            const snapshot = await getDocs(q);
-
-            let index = 0;
-            const deletions = [];
-
-            snapshot.forEach(doc => {
-                if (index >= 100) {
-                    deletions.push(deleteDoc(doc.ref));
-                }
-                index++;
-            });
-
-            if (deletions.length > 0) {
-                await Promise.all(deletions);
-                console.log(`🧹 Cleanup: ${deletions.length} Einträge gelöscht`);
-            }
-        }
-
         async function saveHighscoreGlobal(name, score) {
             const { collection, addDoc } = window.fs;
 
@@ -1042,7 +919,6 @@
             document.getElementById('speed-level').textContent = 1;
             document.getElementById('score').textContent = score;
             gameOver = false;
-            gameStarted = false;
 
             placefood();
 
@@ -1056,42 +932,18 @@
             }
 
 
-
         }
 
 
-        const nameInput = document.getElementById('player-name');
-        if (nameInput) {
-            nameInput.addEventListener('keydown', e => {
-                if (e.key === 'Enter') {
-                    saveHighscore();
-                }
-            });
-        }
+        document.getElementById('player-name').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                saveHighscore();
+            }
+        });
 
-        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
-
-
-
-        const startBtn = document.getElementById('start-btn');
-        const startScreen = document.getElementById('start-screen');
-        const gameScreen = document.getElementById('game-screen');
-
-        startBtn.addEventListener('click', () => {
-            startScreen.classList.remove('active');
-            gameScreen.classList.add('active');
-
-            unlockAudio();     // 🔊 nur Audio
-            gameStarted = true;
-
-            draw();            // 🎨 Renderloop starten
-            gameInterval = setInterval(gameloop, baseSpeed); // 🐍 Spiel läuft
-
-            loadGlobalHighscores();
-        });
 
 
     </script>

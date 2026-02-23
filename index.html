@@ -1060,12 +1060,16 @@
         }
 
 
-        document.getElementById('player-name').addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                saveHighscore();
-            }
-        });
+        const nameInput = document.getElementById('player-name');
+        if (nameInput) {
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    saveHighscore();
+                }
+            });
+        }
 
+        
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }

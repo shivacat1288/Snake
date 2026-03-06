@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snake</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
 
     <style>
         body {
@@ -20,10 +21,23 @@
             align-items: center;
         }
 
+
         .game-wrapper {
             display: flex;
             gap: 30px;
             margin-top: 30px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            overscroll-behavior: none;
         }
 
         /* 🐍 CANVAS */
@@ -43,13 +57,25 @@
         /* 🏆 SCOREBOARD */
         .score-board {
             min-width: 200px;
+            max-height: 480px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.8);
             border: 2px solid #ff00ff;
             box-shadow:
                 0 0 10px #ff00ff,
                 0 0 20px #ff00ff;
+            /* 🔑 gleiche Höhe wie Canvas */
+            overflow: hidden;
         }
+
+        .score-board ol {
+            max-height: 360px;
+            /* Platz unter Score + Level */
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+
 
         .score-board p {
             font-size: 18px;
@@ -79,7 +105,7 @@
         }
 
         /* 🏅 Platz 1 extra Glow */
-        .score-board li:first-child {
+        #highscore-list li:first-child {
             color: #ffff00;
             text-shadow:
                 0 0 5px #ffff00,
@@ -157,6 +183,177 @@
                 padding-bottom: 20px;
             }
         }
+
+        .screen {
+            display: none;
+            width: 100%;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* 🟣 STARTSCREEN */
+        .start-layout.vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            margin-top: 40px;
+        }
+
+        /* Start Button oben priorisieren */
+        #start-btn {
+            margin: 20px 0 30px 0;
+            width: 100%;
+        }
+
+        /* Highscore Bereich */
+        .start-highscore-title {
+            margin-bottom: 10px;
+            color: #ff00ff;
+            text-shadow: 0 0 8px #ff00ff;
+        }
+
+        #highscore-list {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-left: 20px;
+        }
+
+        .start-left {
+            text-align: center;
+        }
+
+        .neon-title {
+            font-size: 48px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            margin-bottom: 30px;
+        }
+
+        #start-btn {
+            font-size: 22px;
+            padding: 15px 30px;
+            background: black;
+            color: #ff00ff;
+            border: 3px solid #ff00ff;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff00ff;
+        }
+
+        #start-btn:hover {
+            background: #ff00ff;
+            color: black;
+        }
+
+        /* 🟢 SWIPE AREA */
+        #swipe-area {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 480px;
+            height: 300px;
+            /* 👈 größer */
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 15px #00ffff;
+            color: #ff00ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 5px #ff00ff;
+
+            touch-action: none;
+            /* 🔑 WICHTIG */
+            overscroll-behavior: none;
+            /* 🔑 WICHTIG */
+        }
+
+        /* 📱 MOBILE */
+        @media (max-width: 768px) {
+            .start-layout.vertical {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        @keyframes flicker {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.85;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .neon-title {
+            animation: flicker 2s infinite;
+        }
+
+        @keyframes neonPulse {
+            0% {
+                box-shadow: 0 0 5px #ff00ff;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            }
+
+            100% {
+                box-shadow: 0 0 5px #ff00ff;
+            }
+        }
+
+        #start-btn {
+            animation: neonPulse 1.5s infinite;
+        }
+
+        #rank-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            color: #00ffff;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 15px #00ffff;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 9999;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translate(0);
+            }
+
+            20% {
+                transform: translate(-5px, 5px);
+            }
+
+            40% {
+                transform: translate(5px, -5px);
+            }
+
+            60% {
+                transform: translate(-5px, -5px);
+            }
+
+            80% {
+                transform: translate(5px, 5px);
+            }
+
+            100% {
+                transform: translate(0);
+            }
+        }
     </style>
 
 
@@ -169,7 +366,8 @@
             query,
             orderBy,
             limit,
-            getDocs
+            getDocs,
+            deleteDoc
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -183,7 +381,7 @@
 
         // 🔓 Global verfügbar machen
         window.db = db;
-        window.fs = { collection, addDoc, query, orderBy, limit, getDocs };
+        window.fs = { collection, addDoc, query, orderBy, limit, getDocs, deleteDoc };
     </script>
 
 </head>
@@ -191,22 +389,37 @@
 <body>
 
 
-    <div class="game-wrapper">
-        <canvas id="canvas" width="480" height="480"></canvas>
+    <!-- 🟣 STARTSCREEN -->
+    <div id="start-screen" class="screen active">
+        <div class="start-layout vertical">
 
-        <div class="score-board">
-            <p>Score: <span id="score">0</span></p>
-            <p>Level: <span id="speed-level">1</span></p>
-            <br>
-            <h3>Top 100</h3>
+            <h1 class="neon-title">NEON SNAKE</h1>
+
+            <button id="start-btn">▶ START GAME</button>
+
+            <h3 class="start-highscore-title">Top 100</h3>
             <ol id="highscore-list"></ol>
+
         </div>
     </div>
 
-    <div id="name-input" style="display:none">
-        <p>Neuer Highscore!</p>
-        <input type="text" id="player-name" maxlength="10" placeholder="Name">
-        <button onclick="saveHighscore()">Speichern</button>
+    <!-- 🟢 GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <div class="game-wrapper">
+            <canvas id="canvas" width="480" height="480"></canvas>
+        </div>
+
+        <div id="name-input" style="display:none;">
+            <p>Neuer Highscore! Name eingeben:</p>
+            <input type="text" id="player-name" maxlength="12" />
+            <button onclick="saveHighscore()">OK</button>
+        </div>
+
+        <!-- 👆 Swipe Area -->
+        <div id="swipe-area">
+            <h2>Swipe to move</h2>
+
+        </div>
     </div>
 
     <script>
@@ -239,6 +452,10 @@
         let speedLevel = 0; // wie oft wir schneller geworden sind
         let levelUpSound = new Audio('levelup.mp3');
         levelUpSound.volume = 0.4;
+        let gameOverSound = new Audio('gameover.mp3');
+        gameOverSound.volume = 0.5;
+        let superFoodSound = new Audio('superfood.mp3');
+        superFoodSound.volume = 0.5;
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
@@ -250,11 +467,12 @@
         let vibrationUnlocked = false;
         let superFood = null;
         let globalHighscores = [];
+        let gameOverAlpha = 0;
 
         window.addEventListener('load', () => {
             loadGlobalHighscores();
         });
-        
+
         const SUPERFOOD_CHANCE = 0.30;  // 25 % Chance nach normalem Essen
         let rainbowMode = false;
         let rainbowExpiresAt = 0;
@@ -264,7 +482,7 @@
         let silentAudio = new Audio();
         silentAudio.src = "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAA==";
         silentAudio.loop = true;
-        [eatsound, bgMusic, levelUpSound].forEach(a => {
+        [eatsound, bgMusic, levelUpSound, gameOverSound, superFoodSound].forEach(a => {
             a.preload = 'auto';
             a.playsInline = true;     // 🔑 iOS FIX
             a.muted = false;
@@ -274,34 +492,47 @@
 
 
         document.addEventListener('keydown', keyDown);
-        canvas.addEventListener('touchstart', e => {
-            const touch = e.touches[0];
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-        }, { passive: true });
 
+        const swipeArea = document.getElementById('swipe-area');
 
-        canvas.addEventListener('click', unlockAudio);
-        canvas.addEventListener('touchstart', unlockAudio);
+        swipeArea.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+        }, { passive: false });
 
-        canvas.addEventListener('touchend', e => {
-            const touch = e.changedTouches[0];
-            touchEndX = touch.clientX;
-            touchEndY = touch.clientY;
+        swipeArea.addEventListener('touchend', e => {
+            e.preventDefault();
 
-            handleSwipe();
-        });
+            const t = e.changedTouches[0];
+            touchEndX = t.clientX;
+            touchEndY = t.clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            const isTap = Math.abs(dx) < 10 && Math.abs(dy) < 10;
+
+            // 🔁 TAP = Restart
+            if (gameOver && isTap) {
+                restartGame();
+                return;
+            }
+
+            // 👉 SWIPE = Bewegung
+            if (!gameOver) {
+                handleSwipe();
+            }
+        }, { passive: false });
+
 
         canvas.addEventListener('click', () => {
             if (gameOver) restartGame();
         });
 
-        draw(); // ist die zeichnen funktion
 
 
-
-
-        document.getElementById('speed-level').textContent = speedLevel + 1;
 
         function draw() {
 
@@ -330,38 +561,82 @@
 
 
             if (gameOver) {
+                gameOverAlpha = Math.min(1, gameOverAlpha + 0.03);
+
+                ctx.save();
+                ctx.globalAlpha = gameOverAlpha;
+
                 ctx.fillStyle = 'red';
-                ctx.font = '40px Arial';
+                ctx.font = '48px Arial';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 40);
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
 
+                ctx.fillStyle = '#00ffff';
+                ctx.font = '28px Arial';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 15;
+                ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2);
+
+                ctx.shadowBlur = 0;
+                ctx.font = '18px Arial';
                 ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText(`Gesamtpunkte: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
-
-                ctx.font = '16px Arial';
                 ctx.fillText(
-                    'Tippen oder Leertaste zum Neustart',
+                    'Tap or Space to restart',
                     canvas.width / 2,
-                    canvas.height / 2 + 50
+                    canvas.height / 2 + 40
                 );
+
+                ctx.restore();
             }
             drawLevelUpEffect();
+
+            drawHUD();
 
             requestAnimationFrame(draw);
 
         }
 
-        function drawFood(x, y) {
-            ctx.fillStyle = 'yellow';
-            ctx.fillRect(
-                x * cellWidth,
-                y * cellHeight,
-                cellWidth - 1,
-                cellHeight - 1
-            );
+        function drawHUD() {
+            ctx.save();
+
+            ctx.font = '22px Courier New';
+            ctx.fillStyle = '#00ffff';   // Farbe für Anzeige im Canvas
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 8;          // 🔥 Glow Effekt
+
+            ctx.fillText(`Score: ${score}`, 8, 6);
+            ctx.fillText(`Level: ${speedLevel + 1}`, 8, 22);
+
+            ctx.shadowBlur = 0;          // Wichtig zurücksetzen!
+
+            ctx.restore();
         }
+
+        function drawFood(x, y) {
+
+            const px = x * cellWidth;
+            const py = y * cellHeight;
+
+            // Puls Animation
+            const pulse = Math.sin(Date.now() / 120) * 2;
+
+            ctx.shadowColor = "#ffff00";
+            ctx.shadowBlur = 15;
+
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(
+                px - pulse / 2,
+                py - pulse / 2,
+                cellWidth - 1 + pulse,
+                cellHeight - 1 + pulse
+            );
+
+            ctx.shadowBlur = 0;
+        }
+
 
         function drawSuperFood(x, y) {
             const px = x * cellWidth;
@@ -471,38 +746,40 @@
             ctx.stroke();
         }
 
+        function screenFlash(color) {
+            const flash = document.createElement("div");
+            flash.style.position = "fixed";
+            flash.style.inset = "0";
+            flash.style.background = color;
+            flash.style.opacity = "0.3";
+            flash.style.pointerEvents = "none";
+            document.body.appendChild(flash);
+
+            setTimeout(() => {
+                flash.style.transition = "opacity 0.3s";
+                flash.style.opacity = "0";
+                setTimeout(() => flash.remove(), 300);
+            }, 50);
+        }
+
         function unlockAudio() {
-            if (gameStarted) return;
+            if (musicUnlocked) return;
 
-            gameStarted = true;
             musicUnlocked = true;
-            vibrationUnlocked = true; // 👈 HIER
+            vibrationUnlocked = true;
 
-            // 🔓 Vibrations-Engine einmal aktivieren
-            if (navigator.vibrate) {
-                navigator.vibrate(1);
-            }
-            bgMusic.load();
-            // 🔊 Audio-Engine freischalten (ECHTER Sound!)
+            if (navigator.vibrate) navigator.vibrate(1);
+
             eatsound.currentTime = 0;
-            eatsound.volume = 0.05;
-
             eatsound.play().then(() => {
                 eatsound.pause();
                 eatsound.currentTime = 0;
-                eatsound.volume = 0.1;
             }).catch(() => { });
 
-            // 🎵 Hintergrundmusik
             if (musicOn) {
                 bgMusic.currentTime = 0;
                 bgMusic.play().catch(() => { });
             }
-
-            // ▶️ GAME STARTET ERST JETZT
-            gameInterval = setInterval(gameloop, baseSpeed);
-
-
         }
 
         function testGameOver() {
@@ -520,8 +797,12 @@
 
             if (hitWall || hitSelf) {
                 gameOver = true;
+                screenFlash("red");
+                shakeScreen();
                 clearInterval(gameInterval);
                 bgMusic.pause();
+                gameOverSound.currentTime = 0;
+                gameOverSound.play().catch(() => { });
 
                 const qualifies =
                     globalHighscores.length < 100 ||
@@ -531,6 +812,17 @@
                     showNameInput();
                 }
             }
+
+        }
+
+        function shakeScreen() {
+            const game = document.getElementById("game-screen");
+
+            game.style.animation = "shake 0.4s";
+
+            setTimeout(() => {
+                game.style.animation = "";
+            }, 400);
         }
 
         async function saveHighscore() {
@@ -541,12 +833,21 @@
             document.getElementById('name-input').style.display = 'none';
             input.value = '';
 
-            await saveHighscoreGlobal(name, score);
+            const newId = await saveHighscoreGlobal(name, score);
+
+            await cleanupHighscores();
             await loadGlobalHighscores();
 
-            restartGame();
-        }
+            const rank = globalHighscores.findIndex(
+                entry => entry.id === newId
+            );
 
+            if (rank !== -1) {
+                showRankOverlay(rank);
+            } else {
+                restartGame();
+            }
+        }
 
 
 
@@ -561,27 +862,81 @@
 
             const snapshot = await getDocs(q);
 
+            const docs = snapshot.docs; // 🔥 DAS ist ein Array
+
             globalHighscores = [];
             const list = document.getElementById("highscore-list");
             list.innerHTML = "";
 
-            snapshot.forEach(doc => {
+            docs.forEach((doc, index) => {
                 const data = doc.data();
-                globalHighscores.push(data);
+                globalHighscores.push({
+                    id: doc.id,   // 🔥 ID mit speichern
+                    ...data
+                });
 
                 const li = document.createElement("li");
-                li.textContent = `${data.name} – ${data.score}`;
+
+                if (index === 0) {
+                    li.textContent = `🥇 ${data.name} – ${data.score}`;
+                    li.style.color = "#FFD700";
+                    li.style.fontWeight = "bold";
+                    li.style.textShadow = "0 0 6px #FFD700, 0 0 12px #FFD700";
+                }
+                else if (index === 1) {
+                    li.textContent = `🥈 ${data.name} – ${data.score}`;
+                    li.style.color = "#C0C0C0";
+                    li.style.fontWeight = "bold";
+                }
+                else if (index === 2) {
+                    li.textContent = `🥉 ${data.name} – ${data.score}`;
+                    li.style.color = "#CD7F32";
+                    li.style.fontWeight = "bold";
+                }
+                else {
+                    li.textContent = `${index + 1}. ${data.name} – ${data.score}`;
+                }
+
                 list.appendChild(li);
             });
         }
+
+        async function cleanupHighscores() {
+            const { collection, query, orderBy, getDocs, deleteDoc } = window.fs;
+
+            const q = query(
+                collection(db, "highscores"),
+                orderBy("score", "desc")
+            );
+
+            const snapshot = await getDocs(q);
+
+            let index = 0;
+            const deletions = [];
+
+            snapshot.forEach(doc => {
+                if (index >= 100) {
+                    deletions.push(deleteDoc(doc.ref));
+                }
+                index++;
+            });
+
+            if (deletions.length > 0) {
+                await Promise.all(deletions);
+                console.log(`🧹 Cleanup: ${deletions.length} Einträge gelöscht`);
+            }
+        }
+
         async function saveHighscoreGlobal(name, score) {
             const { collection, addDoc } = window.fs;
 
-            await addDoc(collection(db, "highscores"), {
+            const docRef = await addDoc(collection(db, "highscores"), {
                 name,
                 score,
                 created: Date.now()
             });
+
+            return docRef.id; // 🔥 ID zurückgeben
         }
 
         function showNameInput() {
@@ -590,6 +945,38 @@
             document.getElementById('player-name').focus();
         }
 
+
+        function showRankOverlay(rank) {
+            const overlay = document.createElement("div");
+            overlay.id = "rank-overlay";
+
+            overlay.innerHTML = `
+        <div style="text-align:center;">
+            🏆 You placed #${rank + 1}!<br><br>
+            <span style="font-size:18px; opacity:0.8;">
+                Tap to continue
+            </span>
+        </div>
+    `;
+
+            document.body.appendChild(overlay);
+
+            // Fade In
+            setTimeout(() => {
+                overlay.style.opacity = "1";
+            }, 50);
+
+            // 👉 Kein setTimeout Restart mehr!
+            overlay.addEventListener("click", () => {
+                overlay.style.opacity = "0";
+
+                setTimeout(() => {
+                    overlay.remove();
+                    restartGame();
+                }, 300);
+
+            }, { once: true });
+        }
 
         function placefood() {
             let valid = false;
@@ -627,17 +1014,38 @@
 
 
         function add(x, y, index) {
+
+            let wave = Math.sin(Date.now() / (80 - speedLevel * 3) + index * 0.6) * 1.5;
+
+            if (index === 0) wave = 0;
+
+            wave *= (2 + index * 0.08);
+
+            let drawX = x * cellWidth;
+            let drawY = y * cellHeight;
+
+            if (direction === "LEFT" || direction === "RIGHT") {
+                drawY += wave;
+            } else {
+                drawX += wave;
+            }
+
             if (rainbowMode) {
                 ctx.fillStyle = getRainbowColor(index);
             } else {
-                ctx.fillStyle = '#ffffff';
+                ctx.fillStyle = "#ccff00";
             }
 
+            let taper = 1 - (index / snake.length) * 0.35;
+
+            let w = (cellWidth - 1) * taper;
+            let h = (cellHeight - 1) * taper;
+
             ctx.fillRect(
-                x * cellWidth,
-                y * cellHeight,
-                cellWidth - 1,
-                cellHeight - 1
+                drawX + (cellWidth - w) / 2,
+                drawY + (cellHeight - h) / 2,
+                w,
+                h
             );
         }
 
@@ -649,10 +1057,14 @@
 
             // 🟢 Kopf mit Glow
             ctx.shadowColor = '#00ff66';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 14;
             ctx.fillStyle = '#00ff66';
-            ctx.fillRect(px, py, s - 1, s - 1);
-
+            ctx.fillRect(
+                px - 2,
+                py - 2,
+                s + 3,
+                s + 3
+            );
             ctx.shadowBlur = 0; // 👈 Glow AUS
 
             // Rand
@@ -704,11 +1116,11 @@
                 snake[0].y++;
             }
 
+
             // Futer einsammeln und Punkte hoch setzen
             if (snake[0].x == food.x &&
                 snake[0].y == food.y) {
                 score++;
-                document.getElementById('score').textContent = score;
                 growSegments++;
                 placefood();
                 tongueTimer = Math.max(4, 8 - speedLevel);
@@ -734,15 +1146,16 @@
                 score += 10;
                 rainbowMode = true;
                 rainbowExpiresAt = Date.now() + 4000; // 🎯 exakt 4 Sekunden
-                document.getElementById('score').textContent = score;
+                screenFlash("#ff00ff");
+                scorePop();
 
                 // ❌ KEIN growSegments++
                 superFood = null;
 
 
                 // 🔊 Bonus-Feedback (optional)
-                levelUpSound.currentTime = 0;
-                levelUpSound.play();
+                superFoodSound.currentTime = 0;
+                superFoodSound.play();
 
                 // 📳 optional Mini-Buzz
                 if (navigator.vibrate && vibrationUnlocked) {
@@ -777,8 +1190,7 @@
                 }
 
 
-                // 🧠 UI
-                document.getElementById('speed-level').textContent = speedLevel + 1;
+
 
                 // ✨ VISUELLER IMPULS
                 levelUpFlash = 25;
@@ -795,6 +1207,10 @@
 
             if (rainbowMode && Date.now() > rainbowExpiresAt) {
                 rainbowMode = false;
+            }
+
+            if (Math.random() < 0.01) {
+                tongueTimer = 4;
             }
 
 
@@ -833,6 +1249,29 @@
             ctx.fillText('LEVEL UP!', centerX, centerY);
 
             levelUpFlash--;
+        }
+
+        function scorePop() {
+            const pop = document.createElement("div");
+            pop.innerText = "+10";
+            pop.style.position = "fixed";
+            pop.style.left = "50%";
+            pop.style.top = "40%";
+            pop.style.transform = "translate(-50%, -50%)";
+            pop.style.color = "#ff00ff";
+            pop.style.fontSize = "60px";
+            pop.style.textShadow = "0 0 20px #ff00ff";
+            pop.style.pointerEvents = "none";
+
+            document.body.appendChild(pop);
+
+            setTimeout(() => {
+                pop.style.transition = "all 0.5s ease";
+                pop.style.top = "30%";
+                pop.style.opacity = "0";
+            }, 50);
+
+            setTimeout(() => pop.remove(), 600);
         }
 
 
@@ -905,8 +1344,7 @@
         function restartGame() {
             clearInterval(gameInterval);
 
-            document.getElementById('name-input').style.display = 'none';
-
+            // STATE RESET
             superFood = null;
             superFoodExpiresAt = 0;
             rainbowMode = false;
@@ -915,35 +1353,59 @@
             direction = "LEFT";
             nextDirection = "LEFT";
             score = 0;
-            speedLevel = 0; // ✅ wichtig
-            document.getElementById('speed-level').textContent = 1;
-            document.getElementById('score').textContent = score;
+            speedLevel = 0;
+            growSegments = 0;
+            tongueTimer = 0;
+            gameOverAlpha = 0;
+
             gameOver = false;
 
             placefood();
 
-            growSegments = 0;
-            tongueTimer = 0;
-
             gameInterval = setInterval(gameloop, baseSpeed);
 
-            if (musicOn && musicUnlocked && bgMusic.paused) {
+            if (musicOn && musicUnlocked) {
                 bgMusic.play().catch(() => { });
             }
-
-
         }
 
 
-        document.getElementById('player-name').addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                saveHighscore();
-            }
-        });
+        const nameInput = document.getElementById('player-name');
+        if (nameInput) {
+            nameInput.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    saveHighscore();
+                }
+            });
+        }
+
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
+
+
+
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+
+            unlockAudio();     // 🔊 nur Audio
+            gameStarted = true;
+
+            draw();            // 🎨 Renderloop starten
+            gameInterval = setInterval(gameloop, baseSpeed); // 🐍 Spiel läuft
+
+            loadGlobalHighscores();
+        });
+
+
+
+
 
 
     </script>

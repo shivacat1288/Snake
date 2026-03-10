@@ -456,6 +456,8 @@
         gameOverSound.volume = 0.5;
         let superFoodSound = new Audio('superfood.mp3');
         superFoodSound.volume = 0.3;
+        let rareFoodSound = new Audio("rarefood.mp3");
+        rareFoodSound.volume = 0.6;
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
@@ -471,6 +473,8 @@
         let rareSuperFood = null;
         let rareSuperFoodExpiresAt = 0;
 
+
+
         window.addEventListener('load', () => {
             loadGlobalHighscores();
         });
@@ -484,7 +488,7 @@
         let silentAudio = new Audio();
         silentAudio.src = "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAAAA==";
         silentAudio.loop = true;
-        [eatsound, bgMusic, levelUpSound, gameOverSound, superFoodSound].forEach(a => {
+        [eatsound, bgMusic, levelUpSound, gameOverSound, rareFoodSound, superFoodSound].forEach(a => {
             a.preload = 'auto';
             a.playsInline = true;     // 🔑 iOS FIX
             a.muted = false;
@@ -538,12 +542,10 @@
 
         function draw() {
 
-            ctx.fillStyle = 'black'; // Cnnvas(hintergrund)
+            ctx.fillStyle = "rgba(10,0,20,0.35)"; // Cnnvas(hintergrund)
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 
-
-            ctx.fillStyle = 'white'; // welche farbe hat die schlange
 
             snake.forEach((part, index) => {
                 if (index === 0) {
@@ -621,6 +623,8 @@
             ctx.restore();
         }
 
+
+
         function drawFood(x, y) {
 
             const px = x * cellWidth;
@@ -697,6 +701,45 @@
             ctx.fill();
 
             ctx.restore();
+        }
+
+
+        function rareExplosion(x, y) {
+
+            const px = x * cellWidth + cellWidth / 2;
+            const py = y * cellHeight + cellHeight / 2;
+
+            for (let i = 0; i < 20; i++) {
+
+                const particle = document.createElement("div");
+
+                particle.style.position = "fixed";
+                particle.style.left = px + "px";
+                particle.style.top = py + "px";
+                particle.style.width = "6px";
+                particle.style.height = "6px";
+                particle.style.background = "#00ccff";
+                particle.style.boxShadow = "0 0 10px #00ccff";
+                particle.style.pointerEvents = "none";
+
+                document.body.appendChild(particle);
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 60 + Math.random() * 40;
+
+                const dx = Math.cos(angle) * dist;
+                const dy = Math.sin(angle) * dist;
+
+                particle.animate([
+                    { transform: "translate(0,0)", opacity: 1 },
+                    { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 }
+                ], {
+                    duration: 600,
+                    easing: "ease-out"
+                });
+
+                setTimeout(() => particle.remove(), 600);
+            }
         }
 
 
@@ -1075,7 +1118,7 @@
 
         function add(x, y, index) {
 
-            let wave = Math.sin(Date.now() / (80 - speedLevel * 3) + index * 0.6) * 1.5;
+            let wave = Math.sin(Date.now() / 80 + index * 0.6) * 1.5;
 
             if (index === 0) wave = 0;
 
@@ -1197,7 +1240,7 @@
                     placeSuperFood();
                 }
 
-                if (!rareSuperFood && Math.random() < 0.15) {
+                if (!rareSuperFood && Math.random() < 0.30) {
                     placeRareSuperFood();
                 }
 
@@ -1240,9 +1283,15 @@
 
                 score += 50;
 
-                rareSuperFood = null;
+                rareExplosion(rareSuperFood.x, rareSuperFood.y);
+
+                rareFoodSound.currentTime = 0;
+                rareFoodSound.play();
 
                 screenFlash("#00ccff");
+                scorePop50(rareSuperFood.x, rareSuperFood.y);
+
+                rareSuperFood = null;
 
                 if (navigator.vibrate && vibrationUnlocked) {
                     navigator.vibrate([60, 40, 60]);
@@ -1310,6 +1359,9 @@
 
         }
 
+
+
+
         function drawLevelUpEffect() {
             if (levelUpFlash <= 0) return;
 
@@ -1364,6 +1416,34 @@
             }, 50);
 
             setTimeout(() => pop.remove(), 600);
+        }
+
+        function scorePop50(x, y) {
+
+            const pop = document.createElement("div");
+            pop.innerText = "+50";
+
+            pop.style.position = "fixed";
+
+            pop.style.left = (canvas.offsetLeft + x * cellWidth + cellWidth / 2) + "px";
+            pop.style.top = (canvas.offsetTop + y * cellHeight) + "px";
+
+            pop.style.transform = "translate(-50%, -50%)";
+
+            pop.style.color = "#00ccff";
+            pop.style.fontSize = "60px";
+            pop.style.textShadow = "0 0 20px #00ccff";
+            pop.style.pointerEvents = "none";
+
+            document.body.appendChild(pop);
+
+            setTimeout(() => {
+                pop.style.transition = "all 0.8s ease";
+                pop.style.top = (canvas.offsetTop + y * cellHeight - 60) + "px";
+                pop.style.opacity = "0";
+            }, 50);
+
+            setTimeout(() => pop.remove(), 1200);
         }
 
 
@@ -1501,6 +1581,8 @@
 
 
     </script>
+
+    <footer> © 2026 Developed by Marco Böttger</footer>
 
 </body>
 

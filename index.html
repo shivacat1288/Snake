@@ -450,6 +450,7 @@
         },
         ];
         let food;
+        let food2;
         let cellWidth = canvas.width / cols;
         let cellHeight = canvas.height / rows;
         let direction = "LEFT";
@@ -519,6 +520,7 @@
         });
 
         placefood(); // führt die aktion food hinzufügen aus
+        placefood("food2");
 
 
         document.addEventListener('keydown', keyDown);
@@ -612,7 +614,13 @@
 
             ctx.fillStyle = 'yellow';
 
-            drawFood(food.x, food.y);
+            if (food) {
+                drawFood(food.x, food.y);
+            }
+
+            if (food2) {
+                drawFood2(food2.x, food2.y);
+            }
 
             if (superFood) {
                 drawSuperFood(superFood.x, superFood.y);
@@ -696,6 +704,27 @@
             ctx.shadowBlur = 15;
 
             ctx.fillStyle = "yellow";
+            ctx.fillRect(
+                px - pulse / 2,
+                py - pulse / 2,
+                cellWidth - 1 + pulse,
+                cellHeight - 1 + pulse
+            );
+
+            ctx.shadowBlur = 0;
+        }
+
+        function drawFood2(x, y) {
+
+            const px = x * cellWidth;
+            const py = y * cellHeight;
+
+            const pulse = Math.sin(Date.now() / 120) * 2;
+
+            ctx.shadowColor = "#b300ff";
+            ctx.shadowBlur = 15;
+
+            ctx.fillStyle = "#cc66ff";
             ctx.fillRect(
                 px - pulse / 2,
                 py - pulse / 2,
@@ -1144,17 +1173,34 @@
             }, { once: true });
         }
 
-        function placefood() {
+        function isCellBlocked(x, y, ignoreFood = null) {
+            const foods = [food, food2];
+
+            return (
+                snake.some(part => part.x === x && part.y === y) ||
+                foods.some(f => f && f !== ignoreFood && f.x === x && f.y === y) ||
+                (superFood && superFood.x === x && superFood.y === y) ||
+                (extraFood && extraFood.x === x && extraFood.y === y) ||
+                (rareSuperFood && rareSuperFood.x === x && rareSuperFood.y === y)
+            );
+        }
+
+        function placefood(target = "food") {
             let valid = false;
 
             while (!valid) {
                 let randomX = Math.floor(Math.random() * cols);
                 let randomY = Math.floor(Math.random() * rows);
 
-                valid = !snake.some(part => part.x === randomX && part.y === randomY);
+                const currentFood = target === "food2" ? food2 : food;
+                valid = !isCellBlocked(randomX, randomY, currentFood);
 
                 if (valid) {
-                    food = { x: randomX, y: randomY };
+                    if (target === "food2") {
+                        food2 = { x: randomX, y: randomY };
+                    } else {
+                        food = { x: randomX, y: randomY };
+                    }
                 }
             }
         }
@@ -1166,9 +1212,7 @@
                 let x = Math.floor(Math.random() * cols);
                 let y = Math.floor(Math.random() * rows);
 
-                valid =
-                    !snake.some(p => p.x === x && p.y === y) &&
-                    (!food || food.x !== x || food.y !== y);
+                valid = !isCellBlocked(x, y);
 
 
                 if (valid) {
@@ -1185,11 +1229,7 @@
                 let x = Math.floor(Math.random() * cols);
                 let y = Math.floor(Math.random() * rows);
 
-                valid =
-                    !snake.some(p => p.x === x && p.y === y) &&
-                    (!food || food.x !== x || food.y !== y) &&
-                    (!superFood || superFood.x !== x || superFood.y !== y) &&
-                    (!extraFood || extraFood.x !== x || extraFood.y !== y);
+                valid = !isCellBlocked(x, y);
 
 
                 if (valid) {
@@ -1208,10 +1248,7 @@
                 let x = Math.floor(Math.random() * cols);
                 let y = Math.floor(Math.random() * rows);
 
-                valid =
-                    !snake.some(p => p.x === x && p.y === y) &&
-                    (!food || food.x !== x || food.y !== y) &&
-                    (!superFood || superFood.x !== x || superFood.y !== y);
+                valid = !isCellBlocked(x, y);
 
                 if (valid) {
                     rareSuperFood = { x, y };
@@ -1330,11 +1367,17 @@
 
 
             // Futer einsammeln und Punkte hoch setzen
-            if (snake[0].x == food.x &&
-                snake[0].y == food.y) {
+            const ateFood1 = food &&
+                snake[0].x === food.x &&
+                snake[0].y === food.y;
+            const ateFood2 = food2 &&
+                snake[0].x === food2.x &&
+                snake[0].y === food2.y;
+
+            if (ateFood1) {
                 score++;
                 growSegments++;
-                placefood();
+                placefood("food");
                 tongueTimer = Math.max(4, 8 - speedLevel);
 
                 eatsound.currentTime = 0; // wichtig bei schnellem Essen
@@ -1354,6 +1397,31 @@
                 }
 
                 // 📳 MINI-BUZZ beim Essen
+                if (navigator.vibrate && vibrationUnlocked) {
+                    navigator.vibrate(20);
+                }
+            }
+
+            if (ateFood2) {
+                score += 10;
+                placefood("food2");
+                tongueTimer = Math.max(4, 8 - speedLevel);
+
+                eatsound.currentTime = 0;
+                eatsound.play();
+
+                if (!superFood && Math.random() < SUPERFOOD_CHANCE) {
+                    placeSuperFood();
+                }
+
+                if (!extraFood && Math.random() < EXTRAFOOD_CHANCE) {
+                    placeExtraFood();
+                }
+
+                if (!rareSuperFood && Math.random() < 0.30) {
+                    placeRareSuperFood();
+                }
+
                 if (navigator.vibrate && vibrationUnlocked) {
                     navigator.vibrate(20);
                 }
@@ -1699,6 +1767,7 @@
             gameOver = false;
 
             placefood();
+            placefood("food2");
             rareSuperFood = null;
             rareSuperFoodExpiresAt = 0;
 
